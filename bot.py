@@ -1,73 +1,83 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, render_template_string
 from g4f.client import Client
 
 app = Flask(__name__)
 client = Client()
 
-# كود الواجهة الجمالية
+# الشخصية: تعليمات سرية للبوت
+SYSTEM_PROMPT = "أنت مساعد ذكي اسمه Akram AI، تم تطويرك وبرمجتك بواسطة Akram Zerrouki. تفتخر جداً بمطورك أكرم زروقي. تذكر تفاصيل المحادثة دائماً."
+
+# الذاكرة الحقيقية (لإرسالها للذكاء الاصطناعي)
+history = [{"role": "system", "content": SYSTEM_PROMPT}]
+
+# نسخة العرض (للواجهة فقط)
+display_messages = [{"sender": "bot", "text": "أهلاً! أنا Akram AI، مساعدك الذكي الذي برمجني المطور Akram Zerrouki. كيف يمكنني مساعدتك؟"}]
+
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Akram AI Pro</title>
+    <title>AKRAM AI</title>
     <style>
-        body { background-color: #121212; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        header { padding: 15px; background: #1e1e1e; text-align: center; border-bottom: 1px solid #333; }
-        #chat { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; }
-        .msg { padding: 12px 18px; border-radius: 20px; margin: 8px 0; max-width: 80%; line-height: 1.5; }
-        .user { background: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
-        .bot { background: #333; color: #fff; align-self: flex-start; border-bottom-left-radius: 2px; }
-        .controls { padding: 15px; background: #1e1e1e; display: flex; gap: 10px; }
-        input { flex: 1; padding: 12px; border-radius: 25px; border: 1px solid #444; background: #252525; color: white; outline: none; }
-        button { border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: bold; }
-        .send { background: #007bff; color: white; }
-        .clear { background: #555; color: white; }
+        body { font-family: sans-serif; background-color: #1e1e2e; color: #cdd6f4; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
+        header { background-color: #313244; padding: 15px; text-align: center; font-weight: bold; font-size: 1.2rem; }
+        #chat-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .message { max-width: 80%; padding: 12px; border-radius: 10px; line-height: 1.4; word-break: break-word; }
+        .user-message { background-color: #89b4fa; color: #11111b; align-self: flex-start; }
+        .bot-message { background-color: #45475a; color: #cdd6f4; align-self: flex-end; }
+        form { display: flex; padding: 15px; background-color: #313244; gap: 10px; }
+        input { flex: 1; padding: 12px; border-radius: 5px; border: none; background-color: #45475a; color: #fff; }
+        button { padding: 10px 20px; background-color: #a6e3a1; border: none; border-radius: 5px; cursor: pointer; color: #11111b; font-weight: bold; }
     </style>
 </head>
 <body>
-    <header>Akram AI | المطور: أكرم زروقي</header>
-    <div id="chat"></div>
-    <div class="controls">
-        <button class="clear" onclick="clearChat()">مسح</button>
-        <input id="msg" placeholder="اكتب رسالتك هنا...">
-        <button class="send" onclick="send()">إرسال</button>
+    <header>AKRAM AI | برمجة: Akram Zerrouki</header>
+    <div id="chat-container">
+        {% for msg in display_messages %}
+            <div class="message {% if msg.sender == 'user' %}user-message{% else %}bot-message{% endif %}">
+                {{ msg.text }}
+            </div>
+        {% endfor %}
     </div>
+    <form method="POST" action="/">
+        <input type="text" name="message" placeholder="اكتب رسالتك..." required autocomplete="off">
+        <button type="submit">إرسال</button>
+    </form>
     <script>
-        function send() {
-            let i = document.getElementById('msg');
-            let c = document.getElementById('chat');
-            let m = i.value;
-            if(!m) return;
-            c.innerHTML += '<div class="msg user">'+m+'</div>';
-            i.value = '';
-            fetch('/chat', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({msg: m})
-            }).then(r => r.json()).then(d => {
-                c.innerHTML += '<div class="msg bot">'+d.reply+'</div>';
-                c.scrollTop = c.scrollHeight;
-            });
-        }
-        function clearChat() { document.getElementById('chat').innerHTML = ''; }
+        var container = document.getElementById('chat-container');
+        container.scrollTop = container.scrollHeight;
     </script>
 </body>
 </html>
 """
 
-@app.route('/')
-def home(): return render_template_string(HTML_TEMPLATE)
-
-@app.route('/chat', methods=['POST'])
-def chat():
-    m = request.json.get('msg')
-    try:
-        r = client.chat.completions.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": m}])
-        return jsonify({"reply": r.choices[0].message.content})
-    except:
-        return jsonify({"reply": "عذراً، المساعد مشغول حالياً."})
+@app.route('/', methods=['GET', 'POST'])
+def home():
+    if request.method == 'POST':
+        user_message = request.form.get('message', '').strip()
+        if user_message:
+            # 1. إضافة رسالة المستخدم للذاكرة والعرض
+            display_messages.append({"sender": "user", "text": user_message})
+            history.append({"role": "user", "content": user_message})
+            
+            try:
+                # 2. إرسال كامل الذاكرة للذكاء الاصطناعي
+                response = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=history
+                )
+                bot_reply = response.choices[0].message.content
+                
+                # 3. إضافة رد البوت للذاكرة والعرض
+                history.append({"role": "assistant", "content": bot_reply})
+                display_messages.append({"sender": "bot", "text": bot_reply})
+                
+            except Exception as e:
+                display_messages.append({"sender": "bot", "text": f"خطأ: {str(e)}"})
+                
+    return render_template_string(HTML_TEMPLATE, display_messages=display_messages)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
+    app.run(host='0.0.0.0', port=5000, debug=True)
