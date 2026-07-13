@@ -13,29 +13,29 @@ HTML_TEMPLATE = """
     <title>Akram AI Pro</title>
     <style>
         body { background: #0f172a; color: #f8fafc; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        header { padding: 20px; background: #1e293b; text-align: center; font-weight: bold; font-size: 1.2rem; border-bottom: 2px solid #38bdf8; }
+        header { padding: 20px; background: #1e293b; text-align: center; font-weight: bold; }
         #chat { flex: 1; padding: 20px; overflow-y: auto; }
         .msg { padding: 15px; border-radius: 15px; margin: 10px 0; max-width: 85%; }
         .user { background: #38bdf8; color: #000; align-self: flex-start; }
         .bot { background: #334155; color: #fff; align-self: flex-end; }
-        footer { padding: 15px; background: #1e293b; display: flex; gap: 10px; }
+        form { display: flex; padding: 15px; background: #1e293b; gap: 10px; }
         input { flex: 1; padding: 12px; border-radius: 8px; border: none; background: #0f172a; color: white; }
         button { background: #38bdf8; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-    <header>Akram AI | المطور: Akram Zerrouki</header>
+    <header>Akram AI | Developer: Akram Zerrouki</header>
     <div id="chat"></div>
-    <form id="chat-form" onsubmit="event.preventDefault(); send();" style="display: flex; padding: 15px; background: #1e293b; gap: 10px;">
-        <input id="msg" placeholder="اسأل أي شيء..." required>
-        <button type="submit">إرسال</button>
+    <form onsubmit="event.preventDefault(); send();">
+        <input id="msg" placeholder="Ask anything..." required>
+        <button type="submit">Send</button>
     </form>
     <script>
         function send() {
             let i = document.getElementById('msg');
             let c = document.getElementById('chat');
             let m = i.value;
-            c.innerHTML += '<div class="msg user">أنت: '+m+'</div>';
+            c.innerHTML += '<div class="msg user">You: '+m+'</div>';
             i.value = '';
             fetch('/chat', {
                 method: 'POST',
@@ -57,12 +57,12 @@ def home(): return render_template_string(HTML_TEMPLATE)
 @app.route('/chat', methods=['POST'])
 def chat():
     m = request.json.get('msg')
-    prompt = f"أنت مساعد ذكي اسمه Akram AI، مبرمجك هو العبقري أكرم زروقي. أجب على هذا السؤال: {m}"
+    prompt = f"You are Akram AI, developed by Akram Zerrouki. Answer: {m}"
     try:
         r = client.chat.completions.create(model="gpt-3.5-turbo", messages=[{"role": "user", "content": prompt}])
         return jsonify({"reply": r.choices[0].message.content})
     except:
-        return jsonify({"reply": "أهلاً، أنا Akram AI. المبرمج أكرم زروقي يطورني الآن، جرب مجدداً بعد ثوانٍ."})
+        return jsonify({"reply": "Akram AI is updating. Try again in a second."})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
