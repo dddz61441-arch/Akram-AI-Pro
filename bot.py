@@ -4,17 +4,17 @@ import google.generativeai as genai
 
 app = Flask(__name__)
 
-# إعداد مفتاح الـ API (يجب وضعه في إعدادات Render)
-api_key = os.environ.get("AQ.Ab8RN6J_2hpzgabj1dQJyyqVU2Oowr7bZ8FeYtbaqZZWVf06zg")
-genai.configure(api_key=api_key)
+# وضع مفتاحك مباشرة (حل مؤقت لنتأكد من عمله)
+genai.configure(api_key="AQ.Ab8RN6J_2hpzgabj1dQJyyqVU2Oowr7bZ8FeYtbaqZZWVf06zg")
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-HTML_CODE = """
+HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+<head><meta charset="UTF-8"><title>Akram AI</title></head>
 <body>
     <div id="chat"></div>
-    <input id="msg" placeholder="اكتب رسالتك...">
+    <input id="msg" placeholder="اكتب سؤالك...">
     <button onclick="send()">إرسال</button>
     <script>
         function send() {
@@ -34,16 +34,16 @@ HTML_CODE = """
 """
 
 @app.route('/')
-def index(): return render_template_string(HTML_CODE)
+def home(): return render_template_string(HTML_TEMPLATE)
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    user_msg = request.json.get("msg")
+    msg = request.json.get("msg")
     try:
-        response = model.generate_content(user_msg)
+        response = model.generate_content(msg)
         return jsonify({"reply": response.text})
     except Exception as e:
-        return jsonify({"reply": "خطأ في الاتصال بجوجل، تأكد من مفتاح الـ API."})
+        return jsonify({"reply": "خطأ في الاتصال، تأكد من المفتاح في الكود."})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
