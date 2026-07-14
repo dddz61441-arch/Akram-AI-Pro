@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, render_template_string
 from huggingface_hub import InferenceClient
 
 app = Flask(__name__)
-client = InferenceClient(api_key=os.environ.get("HF_TOKEN", "hf_YOUR_KEY"))
+client = InferenceClient(api_key=os.environ.get("HF_TOKEN", "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"))
 
 HTML = """
 <!DOCTYPE html>
