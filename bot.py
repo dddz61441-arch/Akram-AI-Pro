@@ -3,19 +3,22 @@ from flask import Flask, request, jsonify, render_template_string
 from huggingface_hub import InferenceClient
 
 app = Flask(__name__)
-# تأكد من أنك وضعت المفتاح هنا، أو في إعدادات Render باسم HF_TOKEN
-client = InferenceClient(token=os.environ.get("HF_TOKEN", "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"))
+
+# ضع مفتاحك هنا (hf_...)
+api_key = os.environ.get("HF_TOKEN", "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")
+client = InferenceClient(api_key=api_key)
 
 HTML = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوت أكرم</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        #chat { border: 1px solid #ccc; height: 300px; overflow-y: scroll; margin-bottom: 10px; padding: 10px; }
-        input { width: 70%; padding: 10px; }
-        button { padding: 10px; }
+        body { font-family: sans-serif; padding: 15px; display: flex; flex-direction: column; height: 90vh; }
+        #chat { border: 1px solid #ddd; flex-grow: 1; overflow-y: scroll; padding: 10px; margin-bottom: 10px; border-radius: 8px; }
+        input { padding: 12px; width: 100%; box-sizing: border-box; border: 1px solid #ccc; border-radius: 8px; }
+        button { padding: 12px; background: #007bff; color: white; border: none; border-radius: 8px; margin-top: 5px; width: 100%; }
     </style>
 </head>
 <body>
@@ -28,6 +31,7 @@ HTML = """
             let msgInput = document.getElementById('msg');
             let chat = document.getElementById('chat');
             let m = msgInput.value;
+            if(!m) return;
             chat.innerHTML += '<p><b>أنت:</b> ' + m + '</p>';
             msgInput.value = '';
             
@@ -51,8 +55,11 @@ def home(): return render_template_string(HTML)
 def chat():
     try:
         msg = request.json.get("msg")
-        response = client.text_generation(msg, model="mistralai/Mistral-7B-Instruct-v0.3")
-        return jsonify({"reply": response})
+        response = client.chat_completion(
+            model="mistralai/Mistral-7B-Instruct-v0.3",
+            messages=[{"role": "user", "content": msg}]
+        )
+        return jsonify({"reply": response.choices[0].message.content})
     except Exception as e:
         return jsonify({"reply": "حدث خطأ: " + str(e)})
 
