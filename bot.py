@@ -1,32 +1,30 @@
 import os
 from flask import Flask, request, jsonify, render_template_string
-import google.generativeai as genai
+from huggingface_hub import InferenceClient
 
 app = Flask(__name__)
 
-# وضع مفتاحك مباشرة (حل مؤقت لنتأكد من عمله)
-genai.configure(api_key="AQ.Ab8RN6KxP4UtJOBLHTScRcBBQD2tBPifRk_qIu7EHGXOez8XCw")
-model = genai.GenerativeModel('gemini-1.5-flash')
+# ضع مفتاحك (الذي يبدأ بـ hf_...) بين علامتي التنصيص هنا
+client = InferenceClient(api_key="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")
 
-HTML_TEMPLATE = """
+HTML = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-<head><meta charset="UTF-8"><title>Akram AI</title></head>
 <body>
-    <div id="chat"></div>
+    <h3>بوت أكرم الذكي</h3>
     <input id="msg" placeholder="اكتب سؤالك...">
     <button onclick="send()">إرسال</button>
+    <div id="chat"></div>
     <script>
-        function send() {
+        async function send() {
             let m = document.getElementById('msg').value;
-            fetch('/chat', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({msg: m})
-            }).then(r => r.json()).then(d => {
-                document.getElementById('chat').innerHTML += '<p>أنت: ' + m + '</p>';
-                document.getElementById('chat').innerHTML += '<p>البوت: ' + d.reply + '</p>';
+            let r = await fetch('/chat', {
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({msg:m})
             });
+            let d = await r.json();
+            document.getElementById('chat').innerHTML += '<p>أنت: '+m+'</p><p>البوت: '+d.reply+'</p>';
         }
     </script>
 </body>
@@ -34,16 +32,17 @@ HTML_TEMPLATE = """
 """
 
 @app.route('/')
-def home(): return render_template_string(HTML_TEMPLATE)
+def home(): return render_template_string(HTML)
 
 @app.route('/chat', methods=['POST'])
 def chat():
     msg = request.json.get("msg")
-    try:
-        response = model.generate_content(msg)
-        return jsonify({"reply": response.text})
-    except Exception as e:
-        return jsonify({"reply": "خطأ في الاتصال، تأكد من المفتاح في الكود."})
+    # نستخدم هذا الموديل المجاني والقوي
+    response = client.chat_completion(
+        model="mistralai/Mistral-7B-Instruct-v0.3",
+        messages=[{"role": "user", "content": msg}]
+    )
+    return jsonify({"reply": response.choices[0].message.content})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+    app.run(host='0.0.0.0', port=5000)
